@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import OficjalnaListaTras from "./OficjalnaLista";
 import PanelKontrahenci from "./PanelKontrahenci";
 import PanelNadawca from "./PanelNadawca";
+import PanelSerwisowy from "./PanelSerwisowy";
 
 import CMRformularz from "./CMRformularz";
 
@@ -23,6 +24,10 @@ const DashboardBiuro = () => {
         <button onClick={() => setActiveTab("dokumenty")} className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
           📂 Dokumenty
         </button>
+        <button onClick={() => setActiveTab("serwis")} className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
+  🔧 Serwisy
+</button>
+
         <button onClick={() => setActiveTab("raporty")} className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
           📊 Raporty
         </button>
@@ -50,6 +55,7 @@ const DashboardBiuro = () => {
         {activeTab === "oficjalna-lista" && <OficjalnaListaTras />}
         {activeTab === "kontrahenci" && <PanelKontrahenci />}
         {activeTab === "nadawca" && <PanelNadawca />}
+        {activeTab === "serwis" && <PanelSerwisowy />}
 
         {activeTab === "ustawienia" && <p>⚙️ Ustawienia - konfiguracja systemu.</p>}
         {activeTab === null && (

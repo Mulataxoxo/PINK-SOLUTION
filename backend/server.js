@@ -5,6 +5,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const brudnolistRoutes = require("./routes/brudnolistRoutes");
 const oficjalneTrasyRoutes = require("./routes/oficjalneTrasyRoutes");
+const serwisRoutes = require("./routes/serwisRoutes");
 const app = express();
 console.log("📅 Serwer startuje z datą:", new Date().toISOString());
 console.log("🕒 Strefa czasowa systemu:", Intl.DateTimeFormat().resolvedOptions().timeZone);
@@ -27,6 +28,8 @@ app.use(bodyParser.json());
 app.use("/api/pocztex", pocztexRoutes);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use(oficjalneTrasyRoutes);
+app.use("/api", serwisRoutes);
+
 app.use((req, res, next) => {
     console.log(`📌 Otrzymano żądanie: ${req.method} ${req.url}`);
     next();
@@ -81,8 +84,10 @@ app.get('/auth/trans/callback', async (req, res) => {
 app.get("/api/samochody", (req, res) => {
     console.log("📌 Pobieranie listy samochodów...");
     db.all(`
-        SELECT u.name AS id_samochodu, 
-               COALESCE(p.spedytor, 'wolny') AS spedytor
+      SELECT u.name AS id_samochodu, 
+       COALESCE(p.spedytor, 'wolny') AS spedytor,
+       COALESCE(p.status, 'wolny') AS status
+
         FROM users u
         LEFT JOIN przydzielone_samochody p ON u.name = p.id_samochodu
         WHERE u.role = 'kierowca'
@@ -98,6 +103,7 @@ app.get("/api/samochody", (req, res) => {
 
 // Pobieranie przypisanych samochodów do spedytora
 app.get("/api/samochody/:spedytor", (req, res) => {
+    
     const { spedytor } = req.params;
     console.log(`📌 Pobieranie samochodów dla spedytora: ${spedytor}`);
     db.all(`
@@ -111,6 +117,7 @@ app.get("/api/samochody/:spedytor", (req, res) => {
         res.json(rows);
     });
 });
+
 
 // Przydzielanie samochodu
 app.post("/api/samochody/przydziel", (req, res) => {
@@ -131,6 +138,17 @@ app.post("/api/samochody/przydziel", (req, res) => {
             res.json({ message: "Samochód przypisany do spedytora!" });
         }
     );
+});
+
+// 📌 2. Nowy osobny endpoint do pobierania WSZYSTKICH zajętych samochodów
+app.get("/api/samochody/zajete", (req, res) => {
+    db.all(`SELECT id_samochodu FROM przydzielone_samochody WHERE status = 'przydzielony'`, [], (err, rows) => {
+        if (err) {
+            console.error("❌ Błąd pobierania zajętych samochodów:", err);
+            return res.status(500).json({ error: err.message });
+        }
+        res.json(rows);
+    });
 });
 
 // Oddanie samochodu

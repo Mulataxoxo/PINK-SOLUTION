@@ -109,7 +109,7 @@ const handleLogin = async () => {
     ) : role === "spedytor" ? (
       <>
         <div className="grid grid-cols-3 gap-2 mb-4">
-          {["Viktoria", "Maria", "Andrii"].map((spedytor) => (
+          {["Viktoria", "Maria", "Andrii", "Kiryl"].map((spedytor) => (
             <button
               key={spedytor}
               onClick={() => setName(spedytor)}

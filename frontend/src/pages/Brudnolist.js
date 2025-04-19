@@ -69,18 +69,19 @@ const Brudnolist = () => {
       ) : (
         <table className="w-full border-collapse border border-gray-300">
           <thead>
-            <tr className="bg-gray-200">
-              <th className="border p-2">Załadunek</th>
-              <th className="border p-2">Rozładunek</th>
-              <th className="border p-2">Trasa</th>
-              <th className="border p-2">Kwota</th>
-              <th className="border p-2">Opłaty drogowe</th>
-              <th className="border p-2">Koszt hotelu</th>
-              <th className="border p-2">Koszt paliwa</th>
-              <th className="border p-2">Dystans</th>
-              <th className="border p-2">Czas przejazdu</th>
-              <th className="border p-2">Akcje</th>
-            </tr>
+          <tr className="bg-gray-200">
+  <th className="border p-2">Załadunek</th>
+  <th className="border p-2">Rozładunek</th>
+  <th className="border p-2">Trasa</th>
+  <th className="border p-2">Kwota</th>
+  <th className="border p-2">Koszt paliwa</th>
+  <th className="border p-2">Zysk netto</th>
+  <th className="border p-2">Stawka za km</th>
+  <th className="border p-2">Dystans</th>
+  <th className="border p-2">Czas przejazdu</th>
+  <th className="border p-2">Akcje</th>
+</tr>
+
           </thead>
           <tbody>
             {brudnolist.map((route) => (
@@ -90,9 +91,10 @@ const Brudnolist = () => {
                   <td className="border p-2">{route.rozladunek}</td>
                   <td className="border p-2">{route.trasa || "Brak"}</td>
                   <td className="border p-2">{route.kwota} EUR</td>
-                  <td className="border p-2">{route.oplatyDrogowe || "0"} EUR</td>
-                  <td className="border p-2">{route.kosztHotelu || "0"} EUR</td>
                   <td className="border p-2">{route.kosztPaliwa || "0"} EUR</td>
+<td className="border p-2">{route.zyskNetto || "0"} EUR</td>
+<td className="border p-2">{route.stawkaZaKm || "0"} EUR/km</td>
+
                   <td className="border p-2">{route.distance || "0"} km</td>
                   <td className="border p-2">{route.duration || "0"} min</td>
                   <td className="border p-2">

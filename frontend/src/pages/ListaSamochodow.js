@@ -27,17 +27,15 @@ const ListaSamochodow = () => {
       const resDostepne = await axios.get("http://localhost:5001/api/samochody");
       const resPrzypisane = spedytor ? await axios.get(`http://localhost:5001/api/samochody/${spedytor}`) : { data: [] };
   
-      // 🔥 Usuwamy przypisane samochody z listy dostępnych
-      const listaDostepnych = resDostepne.data.filter(samochod =>
-        !resPrzypisane.data.some(przypisany => przypisany.id_samochodu === samochod.id_samochodu)
-      );
-  
+      const listaDostepnych = resDostepne.data.filter(s => s.status === "wolny");
       setDostepneSamochody(listaDostepnych);
       setPrzypisaneSamochody(resPrzypisane.data);
     } catch (error) {
       console.error("❌ Błąd pobierania samochodów:", error);
     }
   };
+  
+  
 
   const przydzielSamochod = async (id_samochodu) => {
     console.log("Próbuję przydzielić samochód:", id_samochodu, "dla", spedytor);

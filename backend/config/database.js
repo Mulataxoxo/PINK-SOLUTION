@@ -32,6 +32,7 @@ db.get("SELECT COUNT(*) AS count FROM users", (err, row) => {
             { name: "Viktoria", role: "spedytor", pin: "1111", password: null },
             { name: "Andrii", role: "spedytor", pin: "1234", password: null },
             { name: "Maria", role: "spedytor", pin: "6666", password: null },
+            { name: "Kiryl", role: "spedytor", pin: "9999", password: null },
             { name: "Alex", role: "biuro", pin: null, password: "Q1q2q3q4!!" },
             { name: "Lesia", role: "biuro", pin: null, password: "Q1q2q3q4!!" },
             { name: "Oliwka", role: "kadry", pin: null, password: "Q1q2q3q4!!" },
@@ -193,6 +194,18 @@ db.run(`
       email TEXT,
       data TEXT,
       status TEXT
+    )
+  `);
+  db.run(`
+    CREATE TABLE IF NOT EXISTS raporty_serwisowe (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      rejestracja TEXT NOT NULL,
+      data TEXT,
+      przebieg INTEGER,
+      olej INTEGER DEFAULT 0,
+      filtr_powietrza INTEGER DEFAULT 0,
+      filtr_paliwa INTEGER DEFAULT 0,
+      opis TEXT
     )
   `);
   

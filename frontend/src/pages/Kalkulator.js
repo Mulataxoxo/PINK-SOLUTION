@@ -15,8 +15,6 @@ const Kalkulator = () => {
     rozladunek: "",
     przystanki: [],
     kwota: "",
-    oplatyDrogowe: "",
-    kosztHotelu: "",
     zezwolDrogiPlatne: false
   });
   const [editRoute, setEditRoute] = useState(null);
@@ -33,6 +31,7 @@ const Kalkulator = () => {
   const inputRefs = useRef({});
   const [trasaKoordynaty, setTrasaKoordynaty] = useState([]);
   const [podgladKoordynat, setPodgladKoordynat] = useState([]);
+  const [stawkaZaKm, setStawkaZaKm] = useState(0);
 
   // ✅ Poprawnie ustawiony loggedUser:
   const [loggedUser, setLoggedUser] = useState({});
@@ -187,11 +186,12 @@ const calculateRoute = () => {
   }
   
   const waypoints = form.przystanki
-      .filter(stop => stop.lat && stop.lng)
-      .map(stop => ({
-          location: { lat: stop.lat, lng: stop.lng },
-          stopover: true
-      }));
+  .filter(stop => stop.adres?.trim())
+  .map(stop => ({
+    location: stop.adres.trim(),
+    stopover: true
+  }));
+
 
   const request = {
       origin: form.dojazd,
@@ -204,26 +204,62 @@ const calculateRoute = () => {
   try {
       directionsService.current.route(request, (result, status) => {
           if (status === "OK") {
+            console.log("🧪 Legs debug:", result.routes[0].legs.map((leg, index) => ({
+              leg: index,
+              start: leg.start_address,
+              end: leg.end_address,
+              start_coords: leg.start_location.toUrlValue(),
+              end_coords: leg.end_location.toUrlValue()
+            })));
+            
               directionsRenderer.current.setDirections(result);
               
-              // Pobieranie współrzędnych wszystkich przystanków
               const fullCoords = [
-                  { adres: form.zaladunek, lat: result.routes[0].legs[0].start_location.lat(), lng: result.routes[0].legs[0].start_location.lng() },
-                  ...form.przystanki.map((stop, i) => ({
-                      adres: stop.adres,
-                      lat: result.routes[0].legs[i + 1]?.start_location?.lat() || null,
-                      lng: result.routes[0].legs[i + 1]?.start_location?.lng() || null
-                  })),
-                  { adres: form.rozladunek, lat: result.routes[0].legs.slice(-1)[0].end_location.lat(), lng: result.routes[0].legs.slice(-1)[0].end_location.lng() }
+                {
+                  adres: form.dojazd,
+                  lat: result.routes[0].legs[0].start_location.lat(),
+                  lng: result.routes[0].legs[0].start_location.lng()
+                },
+                ...result.routes[0].legs.map((leg, index) => ({
+                  adres: leg.end_address,
+                  lat: leg.end_location.lat(),
+                  lng: leg.end_location.lng()
+                }))
               ];
 
+              setPodgladKoordynat(fullCoords);        // dla wyświetlenia z dojazdem
+setTrasaKoordynaty(fullCoords.slice(1)); // dla backendu bez dojazdu
+              
+              
+              console.log("🧠 form.przystanki:", form.przystanki);
+console.log("🧭 fullCoords:", fullCoords);
+console.log("🧪 Legs:", result.routes[0].legs.length);
+                       
+              
               setTrasaKoordynaty(fullCoords);
+              // 🔁 Zaktualizuj lat/lng w form.przystanki
+setForm((prevForm) => ({
+  ...prevForm,
+  przystanki: prevForm.przystanki.map((stop, i) => ({
+    ...stop,
+    lat: fullCoords[i + 1]?.lat ?? null, // +1 bo 0 to załadunek
+    lng: fullCoords[i + 1]?.lng ?? null,
+  })),
+}));
+
               setPodgladKoordynat(fullCoords);
 
               const totalDistance = result.routes[0].legs.reduce((acc, leg) => acc + leg.distance.value, 0);
               setDistance((totalDistance / 1000).toFixed(1));
               const totalDuration = result.routes[0].legs.reduce((acc, leg) => acc + leg.duration.value, 0);
-              setDuration((totalDuration / 60).toFixed(0));
+
+              const godziny = Math.floor(totalDuration / 3600);
+              const minuty = Math.round((totalDuration % 3600) / 60);
+              
+              setDuration(`${godziny}h ${minuty} min`);
+
+              przeliczKoszty(Number((totalDistance / 1000).toFixed(1)));
+
           } else {
               console.error("Błąd przy obliczaniu trasy:", status);
           }
@@ -273,10 +309,11 @@ const addToBrudnolist = async () => {
     przystanki: trasaKoordynaty,
     trasa: formatTrasa(trasaKoordynaty),
     kwota: form.kwota,
-    oplatyDrogowe: form.oplatyDrogowe,
-    kosztHotelu: form.kosztHotelu,
     distance,
-    duration
+    duration,
+    kosztPaliwa,
+  zyskNetto,
+  stawkaZaKm
   };
 
   console.log("📤 Wysyłane przystanki:", trasaKoordynaty);
@@ -347,11 +384,12 @@ const newEntry = {
     const calkowiteKoszty = kosztPaliwa + oplaty + hotel;
     const marza = (marzaPrzewoznika / 100) * (parseFloat(form.kwota) || 0);
     const zysk = (parseFloat(form.kwota) || 0) - calkowiteKoszty - marza;
-    
+    const stawka = (parseFloat(form.kwota) || 0) / km;
     setKosztPaliwa(kosztPaliwa.toFixed(2));
     setCalkowiteKoszty(calkowiteKoszty.toFixed(2));
     setMarza(marza.toFixed(2));
     setZyskNetto(zysk.toFixed(2));
+    setStawkaZaKm(stawka.toFixed(2));
   };
 
   const addStop = () => {
@@ -376,7 +414,21 @@ const newEntry = {
       <form className="space-y-4">
         {/* Nowe pola dojazd, załadunek, przystanki, rozładunek */}
         <input ref={(el) => (inputRefs.current.dojazd = el)} type="text" name="dojazd" placeholder="Dojazd" value={form.dojazd} onChange={handleChange} className="p-2 border w-full" />
-        <input ref={(el) => (inputRefs.current.zaladunek = el)} type="text" name="zaladunek" placeholder="Załadunek" value={form.zaladunek} onChange={handleChange} className="p-2 border w-full" />
+        <div className="flex w-full gap-2 items-center">
+  <input
+    ref={(el) => (inputRefs.current.zaladunek = el)}
+    type="text"
+    name="zaladunek"
+    placeholder="Załadunek"
+    value={form.zaladunek}
+    onChange={handleChange}
+    className="p-2 border w-full"
+  />
+  <span className="text-xs text-gray-500 whitespace-nowrap">
+    📌 {trasaKoordynaty[0]?.lat ?? "Brak"}, {trasaKoordynaty[0]?.lng ?? "Brak"}
+  </span>
+</div>
+
         
         {/* Dynamiczne przystanki */}
         {form.przystanki.map((stop, index) => (
@@ -414,26 +466,44 @@ const newEntry = {
   </label>
 </div>
 
-<input
-  ref={(el) => (inputRefs.current[`stop-${index}`] = el)}
-  type="text"
-  placeholder={`Przystanek ${index + 1}`}
-  value={stop.adres}
-  onChange={(e) => updateStop(index, e.target.value)}
-  className="p-2 border w-full"
-/>
+<div className="flex w-full gap-2 items-center">
+  <input
+    ref={(el) => (inputRefs.current[`stop-${index}`] = el)}
+    type="text"
+    placeholder={`Przystanek ${index + 1}`}
+    value={stop.adres}
+    onChange={(e) => updateStop(index, e.target.value)}
+    className="p-2 border w-full"
+  />
+  <span className="text-xs text-gray-500 whitespace-nowrap">
+    📌 {stop.lat ?? "Brak"}, {stop.lng ?? "Brak"}
+  </span>
+</div>
+
 
             <button type="button" onClick={() => removeStop(index)} className="bg-red-500 text-white px-2 py-1 rounded">Usuń</button>
           </div>
         ))}
         <button type="button" onClick={addStop} className="bg-green-500 text-white px-4 py-2 rounded">+ Dodaj przystanek</button>
   
-        <input ref={(el) => (inputRefs.current.rozladunek = el)} type="text" name="rozladunek" placeholder="Rozładunek" value={form.rozladunek} onChange={handleChange} className="p-2 border w-full" />
+        <div className="flex w-full gap-2 items-center">
+  <input
+    ref={(el) => (inputRefs.current.rozladunek = el)}
+    type="text"
+    name="rozladunek"
+    placeholder="Rozładunek"
+    value={form.rozladunek}
+    onChange={handleChange}
+    className="p-2 border w-full"
+  />
+  <span className="text-xs text-gray-500 whitespace-nowrap">
+    📌 {trasaKoordynaty[trasaKoordynaty.length - 1]?.lat ?? "Brak"}, {trasaKoordynaty[trasaKoordynaty.length - 1]?.lng ?? "Brak"}
+  </span>
+</div>
+
   
         {/* Istniejące pola */}
         <input type="text" name="kwota" placeholder="Kwota za zlecenie (EUR)" value={form.kwota} onChange={handleChange} className="p-2 border w-full" />
-        <input type="text" name="oplatyDrogowe" placeholder="Opłaty drogowe (EUR)" value={form.oplatyDrogowe} onChange={handleChange} className="p-2 border w-full" />
-        <input type="text" name="kosztHotelu" placeholder="Koszt hotelu (EUR)" value={form.kosztHotelu} onChange={handleChange} className="p-2 border w-full" />
   
         {/* 🔹 Tutaj dodajemy opcję płatnych dróg */}
         <label className="flex items-center space-x-2">
@@ -481,6 +551,8 @@ const newEntry = {
       {duration && <p className="mt-2 text-lg">Czas przejazdu: {duration} min</p>}
       <p className="mt-2 text-lg">Koszt paliwa: {kosztPaliwa} EUR</p>
       <p className="mt-2 text-lg">Całkowite koszty: {calkowiteKoszty} EUR</p>
+      <p className="mt-2 text-lg">Stawka za km: {stawkaZaKm} EUR/km</p>
+
       <p className="mt-2 text-lg">Marża przewoźnika: {marza} EUR</p>
       <p className="mt-2 text-lg font-bold">Zysk netto: {zyskNetto} EUR</p>
     </div>
