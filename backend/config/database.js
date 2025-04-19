@@ -209,6 +209,16 @@ db.run(`
     )
   `);
   
+  db.run(`
+    CREATE TABLE IF NOT EXISTS licznik_od_kierowcy (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      rejestracja TEXT,   -- kolumna, która przechowuje numer rejestracyjny
+      data TEXT,
+      przebieg INTEGER
+    )
+  `);
+  
+  
 
 
 module.exports = db;

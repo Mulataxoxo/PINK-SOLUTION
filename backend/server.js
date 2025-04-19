@@ -1,12 +1,23 @@
 require('dotenv').config();
 const db = require('./config/database');
 const express = require('express');
+const path = require('path'); // upewnij się, że jest zaimportowany!
+const app = express();
+
+app.use('/uploads', (req, res, next) => {
+    if (req.url.endsWith('.pdf')) {
+      res.setHeader('Content-Type', 'application/pdf');
+    }
+    express.static(path.join(__dirname, 'uploads'))(req, res, next);
+  });
+  
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const brudnolistRoutes = require("./routes/brudnolistRoutes");
 const oficjalneTrasyRoutes = require("./routes/oficjalneTrasyRoutes");
 const serwisRoutes = require("./routes/serwisRoutes");
-const app = express();
+const licznikRoutes = require("./routes/licznikRoutes");
+
 console.log("📅 Serwer startuje z datą:", new Date().toISOString());
 console.log("🕒 Strefa czasowa systemu:", Intl.DateTimeFormat().resolvedOptions().timeZone);
 console.log("🧪 EN_LOGIN:", process.env.EN_LOGIN);
@@ -14,7 +25,7 @@ console.log("🧪 EN_PASSWORD:", process.env.EN_PASSWORD ? "OK" : "Brak!");
 
 app.use(express.static("public")); // ⬅️ to umożliwia wyświetlanie formularza
 
-const path = require('path'); // upewnij się, że jest zaimportowany!
+
 const kontrahenciRoutes = require('./routes/kontrahenciRoutes');
 const wysylkaZapytaniaRoutes = require("./routes/wysylkaZapytaniaRoutes");
 const pocztexRoutes = require("./routes/pocztexRoutes");
@@ -25,10 +36,11 @@ const qs = require('querystring');
 // Middleware
 app.use(cors());
 app.use(bodyParser.json());
-app.use("/api/pocztex", pocztexRoutes);
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/soap', pocztexRoutes);
+
 app.use(oficjalneTrasyRoutes);
 app.use("/api", serwisRoutes);
+app.use("/api", licznikRoutes);
 
 app.use((req, res, next) => {
     console.log(`📌 Otrzymano żądanie: ${req.method} ${req.url}`);

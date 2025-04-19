@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-
+import PanelPrzebieg from "./PanelPrzebieg";
 const DashboardKierowca = () => {
   const navigate = useNavigate();
   const [trasy, setTrasy] = useState({ dzisiaj: {}, wczoraj: {}, jutro: {} });
@@ -37,19 +37,64 @@ if (trasy.dzisiaj?.id) {
     
   }, []);
 
+// zakładka
+  const [activeTab, setActiveTab] = useState("zlecenia");
+
+
   return (
     <div className="p-4 bg-gray-100 min-h-screen">
       <header className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Panel Kierowcy:{JSON.parse(localStorage.getItem("loggedUser"))?.name}
-        </h1>
-        <button className="bg-red-500 text-white px-4 py-2 rounded">Wyloguj</button>
-      </header>
+  <h1 className="text-2xl font-bold">
+    Panel Kierowcy: {JSON.parse(localStorage.getItem("loggedUser"))?.name}
+  </h1>
+
+  <div className="flex gap-4">
+    <button
+      onClick={() => setActiveTab("zlecenia")}
+      className={`px-4 py-2 rounded ${activeTab === "zlecenia" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
+    >
+      🧭 Moje trasy
+    </button>
+    <button
+      onClick={() => setActiveTab("przebieg")}
+      className={`px-4 py-2 rounded ${activeTab === "przebieg" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
+    >
+      📏 Wpisz przebieg
+    </button>
+    <button
+      onClick={() => {
+        localStorage.removeItem("loggedUser");
+        navigate("/");
+      }}
+      className="bg-red-500 text-white px-4 py-2 rounded"
+    >
+      Wyloguj
+    </button>
+  </div>
+</header>
+
+
+{activeTab === "zlecenia" && (
+  <>
+    {trasy.dzisiaj?.id && (
+      <section>... twoja sekcja z dzisiejszym zleceniem ...</section>
+    )}
+
+    <section className="grid grid-cols-3 gap-4">
+      ... sekcja z wczoraj/dzisiaj/jutro ...
+    </section>
+  </>
+)}
+
+{activeTab === "przebieg" && <PanelPrzebieg />}
+
 
       {trasy.dzisiaj?.id && (
   <section className="bg-white shadow rounded p-4 my-4">
     <h2 className="text-xl font-semibold">🟢 Dzisiaj</h2>
     <p><strong>Załadunek:</strong> {trasy.dzisiaj?.adres_zaladunku || "Brak danych"}</p>
 <p><strong>Rozładunek:</strong> {trasy.dzisiaj?.adres_rozladunku || "Brak danych"}</p>
+
 
 
 
@@ -83,6 +128,7 @@ if (trasy.dzisiaj?.id) {
     )}
   </section>
 )}
+
 
 
       <section className="grid grid-cols-3 gap-4">

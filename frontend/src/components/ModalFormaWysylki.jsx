@@ -16,8 +16,19 @@ const ModalFormaWysylki = ({ zlecenieId, spedytor, onClose, onZapisz, onZapytani
         email: metoda === "mail" ? email : null,
         adres: metoda === "poczta" ? adres : null,
       });
+      
+      // 📩 Jeśli wpisano maila – zaktualizuj go też w trasie
+      if (metoda === "mail" && email) {
+        await axios.patch(`http://localhost:5001/api/oficjalne_trasy/${zlecenieId}`, {
+          email,
+          kto: spedytor || "system",
+          akcja: "autouzupełnienie e-mail z formy wysyłki"
+        });
+      }
+      
       onZapisz();
       onClose();
+      
     } catch (err) {
       console.error("Błąd zapisu formy wysyłki:", err);
       alert("❌ Błąd zapisu formy wysyłki");

@@ -14,6 +14,7 @@ const ModalWysylka = ({ zlecenieId, onClose, onWyslane }) => {
       await axios.post(`http://localhost:5001/api/zlecenia/${zlecenieId}/wyslij-dokumenty`, {
         email: mailChecked ? email : null,
         adres: pocztaChecked ? adres : null,
+        
       });
       onWyslane();
       onClose();

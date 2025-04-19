@@ -15,6 +15,7 @@ const OficjalnaListaTras = () => {
   const [edycja, setEdycja] = useState({});
   const [filtr, setFiltr] = useState("");
   const [anulacjaModal, setAnulacjaModal] = useState(false);
+  const [daneKontrahenta, setDaneKontrahenta] = useState(null);
 const [anulowanaTrasa, setAnulowanaTrasa] = useState(null);
 const [typAnulacji, setTypAnulacji] = useState("");
 const [anulacjaInfo, setAnulacjaInfo] = useState("");
@@ -32,10 +33,21 @@ const [modalWysylki, setModalWysylki] = useState(null);
     try {
       const res = await axios.get("http://localhost:5001/api/oficjalne_trasy");
       setTrasy(res.data);
+  
+      // 🔁 Jeśli modal jest otwarty, odśwież dane w edycji:
+      if (wybranaTrasa) {
+        const nowa = res.data.find((t) => t.id === wybranaTrasa.id);
+        if (nowa) {
+          setWybranaTrasa(nowa); // ← też uaktualnij widok
+          setEdycja(nowa);       // ← najważniejsze!
+        }
+      }
+  
     } catch (error) {
       console.error("Błąd pobierania tras:", error);
     }
   };
+  
 
 
   const wyslijZapytanie = async (trasa) => {
@@ -101,8 +113,10 @@ const anulujTrase = async (trasa) => {
 
   const pokazSzczegoly = (trasa) => {
     setWybranaTrasa(trasa);
+    setEdycja(trasa); // <-- TU DODAJ
     setShowModal(true);
   };
+  
 
   return (
     <div className="p-6">
@@ -131,6 +145,7 @@ const anulujTrase = async (trasa) => {
             <th className="border p-2">Km zrobione</th>
             <th className="border p-2">Kwota</th>
             <th className="border p-2">Stawka €/km</th>
+            <th className="border p-2">📌 Adnotacje</th>
             <th className="border p-2">Kraj</th>
             <th className="border p-2">Akcje</th>
           </tr>
@@ -166,6 +181,7 @@ const anulujTrase = async (trasa) => {
       <td className="border p-2">{trasa.data_rozladunku}</td>
       <td className="border p-2">{trasa.adres_rozladunku}</td>
       <td className="border p-2">{trasa.nr_zlecenia}</td>
+      <td className="border p-2 whitespace-pre-line">{trasa.adnotacje || "—"}</td>
       <td className="border p-2">
   {trasa.pdf_zlecenie ? (
     <>
@@ -292,9 +308,66 @@ const anulujTrase = async (trasa) => {
     className="border p-2 rounded-lg w-full"
     value={edycja.nip_kontrahenta || ''}
     onChange={(e) => setEdycja({ ...edycja, nip_kontrahenta: e.target.value })}
+    onBlur={async () => {
+      const nip = edycja.nip_kontrahenta;
+      if (!nip || nip.length < 10) return;
+
+      try {
+        const res = await axios.get(`http://localhost:5001/api/rejestr/${nip}`);
+        const firm = res.data.company;
+        if (firm) {
+          setDaneKontrahenta(firm);
+          setEdycja((prev) => ({
+            ...prev,
+            kontrahent_nazwa: firm.name,
+            kontrahent_adres: firm.address,
+            kontrahent_krs: firm.krs,
+            kontrahent_regon: firm.regon,
+            email: prev.email || firm.email || '',
+            telefon: prev.telefon || firm.telefon || ''
+          }));
+        }
+      } catch (err) {
+        console.error("❌ Błąd pobierania kontrahenta:", err);
+        setDaneKontrahenta(null);
+      }
+    }}
     disabled={userRole !== 'biuro' && userRole !== 'kadry'}
   />
+
+  {daneKontrahenta && (
+    <div className="bg-gray-50 p-3 rounded mt-2 text-sm space-y-1 border">
+      <div><strong>📛 Nazwa:</strong> {daneKontrahenta.name}</div>
+      <div><strong>🏢 REGON:</strong> {daneKontrahenta.regon}</div>
+      <div><strong>🏛 KRS:</strong> {daneKontrahenta.krs || '–'}</div>
+      <div><strong>📍 Adres:</strong> {daneKontrahenta.address}</div>
+    </div>
+  )}
+
+  {/* Edytowalne dane kontaktowe */}
+  <div className="mt-4 space-y-2">
+    <div>
+      <label className="text-sm">✉️ Email:</label>
+      <input
+        type="email"
+        className="border p-2 rounded-lg w-full"
+        value={edycja.email || ''}
+        onChange={(e) => setEdycja({ ...edycja, email: e.target.value })}
+      />
+    </div>
+    <div>
+      <label className="text-sm">📞 Telefon:</label>
+      <input
+        type="tel"
+        className="border p-2 rounded-lg w-full"
+        value={edycja.telefon || ''}
+        onChange={(e) => setEdycja({ ...edycja, telefon: e.target.value })}
+      />
+    </div>
+  </div>
 </div>
+
+
 
 {/* 📁 POZOSTAŁE DOKUMENTY */}
 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

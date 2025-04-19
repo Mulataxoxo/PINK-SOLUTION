@@ -120,7 +120,18 @@ const storage = multer.diskStorage({
       
   
     // NIE zapisujemy do bazy – tylko odsyłamy info o pliku
-    res.json({ message: "📁 Plik zapisany", path, filename });
+    const { id } = req.params;
+const kolumna = typ;
+
+db.run(`UPDATE oficjalne_trasy SET ${kolumna} = ? WHERE id = ?`, [path, id], (err) => {
+  if (err) {
+    console.error("❌ Błąd zapisu PDF do bazy:", err.message);
+    return res.status(500).json({ error: "Błąd zapisu PDF do bazy" });
+  }
+
+  res.json({ message: "📁 Plik zapisany i zaktualizowany", path, filename });
+});
+
   });
   // === Wysyłka dokumentów do kontrahenta ===
 router.post("/api/zlecenia/:id/wyslij-dokumenty", async (req, res) => {

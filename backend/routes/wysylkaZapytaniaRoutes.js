@@ -11,11 +11,13 @@ router.post("/api/zlecenia/:id/zapytanie", async (req, res) => {
   const { email, wyslanePrzez } = req.body;
 
   const token = uuidv4();
-  const link = `https://twojadomena.pl/formularz/${token}`;
-
+  const baseUrl = process.env.FRONT_URL || "http://localhost:5001";
+  const link = `${baseUrl}/formularz/${token}`;
+  
   try {
     const zlecenie = await db.get("SELECT * FROM oficjalne_trasy WHERE id = ?", [id]);
     if (!zlecenie) return res.status(404).json({ error: "Zlecenie nie istnieje" });
+    console.log("📝 Dodaję adnotacje:", adnotacja.join(" | "), "→ do zlecenia:", entry.id_zlecenia);
 
     await db.run(
       `INSERT INTO zapytania_wysylkowe (id_zlecenia, token, email, data, status)
