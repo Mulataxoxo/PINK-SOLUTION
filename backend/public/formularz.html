@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <title>Potwierdzenie formy wysyłki</title>
+  <style>
+    body { font-family: sans-serif; padding: 2rem; background: #f4f4f4; }
+    .box { background: white; padding: 2rem; border-radius: 8px; max-width: 500px; margin: auto; }
+    label { display: block; margin: 1rem 0 0.3rem; font-weight: bold; }
+    input[type="text"], input[type="email"], textarea { width: 100%; padding: 0.5rem; margin-bottom: 1rem; }
+    button { background: #007bff; color: white; padding: 0.7rem 1.5rem; border: none; border-radius: 5px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h2>📝 Potwierdzenie formy wysyłki dokumentów</h2>
+    <form id="form">
+      <label><input type="checkbox" name="metoda" value="mail"> 📧 Chcę otrzymać mailem</label>
+      <input type="email" name="email" placeholder="Adres e-mail (jeśli mail)" />
+
+      <label><input type="checkbox" name="metoda" value="poczta"> 📬 Chcę otrzymać pocztą</label>
+      <textarea name="adres" placeholder="Adres korespondencyjny (jeśli poczta)"></textarea>
+
+      <button type="submit">📨 Wyślij odpowiedź</button>
+    </form>
+    <p id="info"></p>
+  </div>
+
+  <script>
+    const form = document.getElementById('form');
+    const info = document.getElementById('info');
+    const token = window.location.pathname.split("/").pop();
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(form));
+      data.metoda = Array.from(form.querySelectorAll("input[name='metoda']:checked"))
+                         .map(el => el.value);
+
+      const res = await fetch(`/formularz/${token}/odpowiedz`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+
+      if (res.ok) {
+        form.style.display = "none";
+        info.innerText = "✅ Odpowiedź została zapisana. Dziękujemy!";
+      } else {
+        info.innerText = "❌ Wystąpił błąd. Spróbuj ponownie później.";
+      }
+    });
+  </script>
+</body>
+</html>

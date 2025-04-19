@@ -1,0 +1,87 @@
+// BACKEND: server/pocztexSoapRoutes.js
+const express = require("express");
+const router = express.Router();
+const soap = require("soap");
+const uuid = require("uuid");
+require("dotenv").config();
+
+const WSDL_URL = "https://e-nadawca.poczta-polska.pl/websrv/en.wsdl";
+
+const EN_LOGIN = process.env.EN_LOGIN;
+const EN_PASSWORD = process.env.EN_PASSWORD;
+const DEFAULT_URZAD = 197550; // np. Zielona Góra
+
+router.post("/soap/nadaj", async (req, res) => {
+  const { nadawca, przesylka, dataNadania } = req.body;
+
+  const client = await soap.createClientAsync(WSDL_URL);
+  client.setSecurity(new soap.BasicAuthSecurity(EN_LOGIN, EN_PASSWORD));
+
+  const today = dataNadania || new Date().toISOString().split("T")[0];
+
+  try {
+    const [buforResult] = await client.createEnvelopeBuforAsync({
+      bufor: [{
+        idKarta: 902793,
+        urzadNadania: DEFAULT_URZAD,
+        dataNadania: {
+          $value: today,
+          $attributes: { "xsi:type": "xsd:date" }
+        }
+      }]
+    });
+
+    const idBufor = buforResult.return?.idBufor;
+    if (!idBufor) return res.status(500).json({ error: "Brak idBufor" });
+
+    const guid = uuid.v4();
+    const shipment = {
+      przesylki: {
+        przesylka: [{
+          guid,
+          masa: parseFloat(przesylka.masa),
+          wartosc: parseFloat(przesylka.wartosc),
+          rodzaj: "POCZTEX",
+          adresat: {
+            nazwa: przesylka.odbiorca,
+            ulica: przesylka.ulica,
+            numerDomu: przesylka.numer_domu,
+            numerLokalu: przesylka.numer_lokalu || "",
+            kodPocztowy: przesylka.kod,
+            miejscowosc: przesylka.miasto,
+            telefon: przesylka.telefon,
+            email: przesylka.email?.trim() || "brak@email.pl"
+          }
+        }]
+      },
+      idBufor
+    };
+
+    const [shipmentResult] = await client.addShipmentAsync(shipment);
+
+    res.json({ guid, idBufor, wynik: shipmentResult });
+  } catch (err) {
+    console.error("❌ SOAP error:", err);
+    res.status(500).json({ error: "SOAP nadanie błąd", details: err });
+  }
+});
+
+router.post("/soap/etykieta", async (req, res) => {
+  const { guid, idBufor } = req.body;
+
+  const client = await soap.createClientAsync(WSDL_URL);
+  client.setSecurity(new soap.BasicAuthSecurity(EN_LOGIN, EN_PASSWORD));
+
+  try {
+    const [labelResult] = await client.getAddresLabelByGuidAsync({ guid: [guid], idBufor });
+    const pdfContent = labelResult?.content?.[0]?.pdfContent;
+
+    if (!pdfContent) return res.status(404).json({ error: "Brak etykiety" });
+    res.json({ base64pdf: pdfContent });
+  } catch (err) {
+    console.error("❌ Błąd pobierania etykiety:", err);
+    res.status(500).json({ error: "SOAP etykieta błąd", details: err });
+  }
+});
+
+module.exports = router;
